@@ -5,18 +5,26 @@
   <title>Automation Scripting Portfolio</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: #f0f2f5;
-      display: flex;
+      display: flex;;
       justify-content: center;
-      align-items: top;
+      align-items: top
+      font-family: Arial, sans-serif;
       min-height: 100vh;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       background-image: url('background1.jpg');
-      background-repeat: no-repeat;
       background-size: cover;
-      background-attachment: fixed;
+      background-position: center;
+      filter: blur(8px) brightness(0.5);
+      z-index: -1;
     }
 
     .container {
