@@ -19,6 +19,19 @@
       background-attachment: fixed;
     }
 
+    .greetings-glass {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 2rem;
+      text-align: center;
+      padding: 1rem 2rem;
+      margin: 2rem auto;
+      width: fit-content;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 0;
+    }
+    
     .container {
       background-color: #ffffff;
       padding: 2em;
@@ -71,9 +84,12 @@
 </head>
 <body>
   <div class="container">
-    <h1>Greetings!</h1>
-    <h2>Below you can find my Automation Scripting Portfolio</h1>
-
+    
+    <div class="greetings-glass">
+      <h1>Greetings!</h1>
+      <h2>Below you can find my Automation Scripting Portfolio</h1>
+    </div>
+    
     <div class="script-card">
       <strong><u>Create Shortcuts To Start Stop Azure VM from Windows Desktop</u></strong>
       <div class="description">This script was developed to solve a problem with always running Azure VMs, which were only used intermittently by Finance stuff. These VMs were accruing unnecessary costs 24/7. My solution was to create an Azure Automation Runbook, which would Start/Stop Azure VM on demand. This script was used to create a shortcut on windows devices, which, when clicked, would trigger automation runbook via a webhook with an authorization token.</div>
