@@ -1,0 +1,383 @@
+#Param(
+#    [Parameter(Mandatory=$true)]
+#     [ValidateNotNullOrEmpty()]
+#     [string]$TenantID,
+#    [Parameter(Mandatory=$true)]
+#     [ValidateNotNullOrEmpty()]
+#     [string]$SubID,
+#     [Parameter(Mandatory=$true)]
+#     [ValidateNotNullOrEmpty()]
+#     [string]$CustomerName
+#     )
+
+#Only required when running locally from your computer
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+#Install and import PSSendGrid PowerShell module:
+if (Get-Module -ListAvailable -Name PSSendGrid) {
+    Write-Warning "PSSendGrid Module is installed"
+} 
+else {
+    Write-Warning "PSSendGrid Module is not installed"
+    Write-Host "Installing PSSendGrid PowerShell Module.."
+    
+    #Disable progress bar:
+    $OriginalPref = $ProgressPreference # Default is 'Continue'
+    $ProgressPreference = "SilentlyContinue"
+
+    Install-Module -Name PSSendGrid -Force
+    Import-Module -Name PSSendGrid -Force
+    Write-Host "Done"
+
+    #Enable progress bar:
+    $ProgressPreference = $OriginalPref
+}
+
+#Connect to Azure and collect a list of all the subscriptions:
+Connect-AzAccount
+$subscriptions = Get-AzSubscription
+
+#Define global variables and parameters:
+$high_usage_quotas = New-Object System.Collections.ArrayList
+$accumulated_quotas_with_high_usage = New-Object System.Collections.ArrayList
+$result_high_usage = New-Object System.Collections.ArrayList
+$customer_name = "Hotelmize"
+
+#Loop through each subscription:
+Foreach ($sub in $subscriptions){
+Select-AzSubscription -SubscriptionId $($sub.id)
+#"c40e9354-7228-4394-9ada-8de0bb8233ae"
+
+#Register required resource providers:
+If (Get-AzResourceProvider -ProviderNamespace Microsoft.Compute){
+Write-Warning "Microsoft.Compute resource provider is registered"
+}
+else
+{
+Write-Warning "Microsoft.Compute resource provider is not registered"
+Write-Host "Registering resource provider.."
+Register-AzResourceProvider -ProviderNamespace Microsoft.Capacity
+Write-Host "Done."
+}
+
+#Check if SPN exists and if not create it:
+$checkspn = Get-AzAdServicePrincipal -DisplayName "Quota-Monitoring"
+If ($checkspn)
+{
+Write-Warning "$($checkspn.displayname) SPN already exists"
+
+#Remove existing SPN client secret:
+Remove-AzADSpCredential -DisplayName "Quota-Monitoring"
+
+#Create new SPN client secret:
+$startDate = Get-Date
+$endDate = $startDate.AddDays(30)
+$secret_temp = New-AzADSpCredential -StartDate $startDate -EndDate $endDate -ObjectId $checkspn.Id | Select-Object SecretText
+Write-Output "Resetting SPN secret.."
+
+#Cut out the SPN secret value:
+$spn_secret = $secret_temp -replace "@{SecretText=" -replace "}"
+Write-Output "New SPN secret (will not be shown again or stored): $spn_secret"
+$i = 60
+Write-Output "Waiting for $i seconds to allow SPN to apply new secret.."
+While (-Not !$i)
+    {
+    Write-Output $i
+    Start-Sleep -Seconds 1
+    $i = $i - 1
+    }
+}
+Else
+{
+#Create SPN and pull all the relevant values from it:
+Write-Warning "SPN $($checkspn.displayName) not found, creating.."
+$spn = New-AzADServicePrincipal -DisplayName "Quota-Monitoring"
+
+#Add new SPN to each subscription IAM with Reader role:
+Foreach ($sub in $subscriptions){
+New-AzRoleAssignment -ObjectId $($spn.Id) `
+-RoleDefinitionName Reader `
+-Scope /subscriptions/$($sub.id)
+}
+Write-Warning "SPN $($spn.DisplayName) has been added to $($sub.id) subscription with 'Reader' Role"
+pause
+
+#Create new SPN client secret:
+$startDate = Get-Date
+$endDate = $startDate.AddDays(30)
+$secret_temp = New-AzADSpCredential -StartDate $startDate -EndDate $endDate -ObjectId $spn.Id | Select-Object SecretText
+Write-Output "Resetting SPN secret.."
+
+#Cut out the SPN secret value:
+$spn_secret = $secret_temp -replace "@{SecretText=" -replace "}"
+Write-Output "New SPN secret (will not be shown again or stored): $spn_secret"
+$i = 60
+Write-Output "Waiting for $i seconds to allow SPN to apply new secret.."
+While (-Not !$i)
+    {
+    Write-Output $i
+    Start-Sleep -Seconds 1
+    $i = $i - 1
+    }
+}
+
+#Pull required parameters from AAD App Registration
+$subscriptionId = $sub.id
+$azureAdApplication = Get-AzADApplication -DisplayName "Quota-Monitoring"
+$clientId = $azureAdApplication.AppID
+$tenantId = $sub.TenantId
+
+#Generating azure access token
+$Uri = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token";
+$Body = @{
+grant_type = "client_credentials"
+client_id = $clientId
+client_secret = $spn_secret
+scope = 'https://management.azure.com/.default'
+redirect_uri = 'https://localhost/'
+}
+
+$authResult = Invoke-RestMethod -Method Post -Uri $uri -ContentType "application/x-www-form-urlencoded" -Body $body
+$accessToken = $authResult.access_token
+$authHeader = @{'Authorization'="Bearer $accessToken"}
+
+#Get customer Tenant name
+$tenant_name = (Get-AzTenant).name
+$sub_name = $sub.Name
+
+#Collect region names into an array:
+$regions = (Get-AzLocation).location
+
+#Define resource types to be checked for quota status:
+$resourcetypes = @("Microsoft.Compute","Microsoft.Storage","Microsoft.Network")
+
+#Loop through all the regions and retrieve quota limits and usage statistics
+Foreach ($resourcetype in $resourcetypes)
+{
+#Create output file headers
+Write-Output "Quota Name, Quota Limit, Current Usage, UsagePercent, Region" | Out-File C:\$tenant_name-$resourcetype-Quotas_with_usage.csv
+Write-Output "Quota Name, Quota Limit, Current Usage, UsagePercent, Region" | Out-File C:\$tenant_name-$resourcetype-Quotas_with_High-Usage.csv
+
+Foreach ($region in $regions)
+{
+#Query Quota REST API to list the limits per specific region
+$request = "https://management.azure.com/subscriptions/$subscriptionId/providers/$resourcetype/locations/$region/usages?api-version=2021-04-01"
+$result = Invoke-RestMethod -Uri $request `
+                        -ContentType application/json `
+                            -Headers $authHeader `
+                            -Method Get
+
+
+#Loop through results and find 0 limit and high usage quotas
+Foreach ($item in $result.value){
+    Write-Output "------------------------$resourcetype-------------------------------$region"
+    Write-Output "Quota Type/SKU: $(($item.name).localizedValue)"
+    Write-Output "Quota Limit: $($item.limit)"
+    Write-Output "Current Usage: $($item.currentvalue)"
+    Write-Output ""
+    Write-Output "Calculating Quota Usage percentage..."
+
+#Check if quota limit is Zero
+If (!$item.limit)
+    {
+    Write-Warning "Current quota limit is set to 0"
+    }
+Else
+    {
+    #Calculate quota usage percentage and round up to 3 decimals:
+    $quota_usage_percent = ($item.currentvalue/$item.limit)*100
+    $quota_usage_percent = [math]::Round($quota_usage_percent,3)
+    
+    Write-Output "Quota Usage Percent: $quota_usage_percent %"
+        #Check if quota usage is high and collect results into an array:
+        If ($($quota_usage_percent -ge 10))
+        {
+            Write-Warning "Quota usage for $(($item.name).localizedValue) is high: $quota_usage_percent% used"
+            $high_usage_quotas.Add([pscustomobject][ordered]@{"Resource_Name"="$(($item.name).localizedValue)";"Region"="$region";"Current_Usage"="$($item.currentvalue)";"Quota_Limit"="$($item.limit)";"Usage_Percent"="$quota_usage_percent"})
+            Write-Output "High Usage Quotas"
+            $high_usage_quotas | Format-Table
+        }
+        Else
+        {
+            Write-Output "Quota usage is within normal limits"
+        }
+    }
+    #Start-Sleep -Milliseconds 50
+}
+
+#Report the findings:
+    #Report on all quotas with high usage:
+    Write-Warning "Following Quotas with High Usage have been detected:"
+    #Create a table array with all the detected quotas with usage:
+    Write-Output "Total High Usage Quotas"
+    $high_usage_quotas | Format-Table -AutoSize
+    $accumulated_quotas_with_high_usage.AddRange($high_usage_quotas)
+    Write-Output "Accumulated Total High Usage Quotas"
+    $accumulated_quotas_with_high_usage | Format-Table
+    #Foreach ($item in $high_usage_quotas){Write-Output "$($item.QuotaName),$($item.QuotaLimit),$($item.CurrentUsage),$($item.UsagePercent),$($item.Region)" | Out-File -Append C:\$tenant_name-$resourcetype-Quotas_with_High-Usage.csv}
+
+    $high_usage_quotas.Clear()
+    #Start-Sleep -Seconds 2
+    cls
+}
+#Start-Sleep -Seconds 2
+
+Write-Warning "Total detected Quotas with high usage:"
+#$result_high_usage = $accumulated_quotas_with_high_usage | Format-Table -AutoSize -HideTableHeaders -Property UsagePercent,QuotaName,Region,CurrentUsage,QuotaLimit | Out-String
+$accumulated_quotas_with_high_usage | Format-Table -AutoSize -GroupBy Region
+}
+
+#Define email html body contents:
+$body = @"
+<!DOCTYPE html>
+<html>
+<body>
+    <div width="100%">  
+    <img src="https://2bcloudscripts.blob.core.windows.net/automation-scripts/Banner_Main.png">
+    <div>
+    <div style="position: absolute;width: 100%;text-align: center;">
+    <h2>company_name: <span>$customer_name</span> | tenant_name: <span>$tenant_name</span> | subsription_name: <span>$($sub.name)</span></h2>
+    </div>
+    <div style="position: absolute;width: 100%;text-align: center;">
+    <h1><span>$count</span> Quotas With High Usage Detected</h1>
+    </div>
+
+</body>
+</html>
+"@
+#Define email html header style:
+$head = @"
+<style>
+    body
+  {
+     background-color: White;
+     height=100%;
+  }
+    
+    div{
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    }
+    table{
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th{
+        vertical-align: center;
+        text-align: center;
+        background-color:#EBE5E1;
+        color:#307DAD;
+        font-family:Berlin Sans FB Demi;
+        margin-top: 0;
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    td{
+        vertical-align: center;
+        text-align: center;
+        border: 1px dotted;
+        color: Black;
+    }
+    h1{
+        display: inline-block;
+        position: relative;
+        background-color:#307DAD;
+        color:#EBE5E1;
+        text-align: center;
+        font-size: 2em;
+        margin-top: 0;
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+    }
+    h1 span{
+        display: inline-block;
+        color:#FBAEA8;
+    }
+    h2{
+        display: inline-block;
+        position: relative;
+        background-color:#395465;
+        color:#EBE5E1;
+        text-align: center;
+        font-size: 1.3em;
+        margin-top: 0;
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+        font-family:Corbel Light;
+        width: 100%;
+    }
+    h2 span{
+        display: inline-block;
+        color:#73DBE5;
+        font-family:Segoe UI Variable Text Semiligh;
+    }
+    h3{
+        background-color:#EBE5E1;
+        color:#307DAD;
+        text-align: center;
+        vertical-align: center;
+        font-size: 1em;
+        margin-top: 0;
+        margin-bottom: 0;
+        margin-left: 0;
+        margin-right: 0;
+        font-family:Bradley Hand ITC;
+        width: 100%;
+    }   
+</style>
+"@
+
+#Read result array contents and format as html table:
+$body_temp = $accumulated_quotas_with_high_usage | Sort-Object Region | ConvertTo-Html -Head $head -Body $Body -PostContent "<h3>This report is provided as a courtesy of '2bcloud Automation Initiative'</h3>" -As Table -Property Resource_Name,Region,Current_Usage,Quota_Limit,Usage_Percent
+$body_temp
+
+#Present result array visually in a console:
+$accumulated_quotas_with_high_usage | Format-Table -AutoSize 
+$result_high_usage
+$count = $($accumulated_quotas_with_high_usage).Count
+Write-Output "$count Quotas with high usage detected!"
+
+#Send an email with quota usage statistics:
+#Call the SendGridMailWithAttachment function and provide parameters:
+$Body = $body_temp | Out-String
+
+$Parameters = @{
+    FromAddress = "stanislav@2bcloud.io"
+    ToAddress   = "stanislav@2bcloud.io"
+    Subject     = "$customer_name - High Usage Quota Alert!"
+    BodyAsHTML  = $Body
+    Token       = "Sendgrid Token Id"
+    FromName    = "2bcloud-Automation"
+    ToName      = "2bcloud-DevOps Support Team"
+    #AttachmentID = "Test"
+    #AttachmentPath  = "c:\test.html"
+    #AttachmentDisposition = "inline"
+}
+Write-Host "Sending High Quota Usage Alert to cs@2bcloud.io.."
+Send-PSSendGridMail @Parameters
+Write-Host "Done. Expect to receive an email to cs@2bcloud.io within a minute."
+Write-Host ""
+
+#Reset variables before next subscription loop:
+$accumulated_quotas_with_high_usage.Clear
+}
+
+#If ($percentagelimitusage -ge 0.70)
+# {
+# Write-Output "Current usage is $($result.properties.currentvalue) out of $($result.properties.limit)"
+
+#$requestlimitincrease = New-AzSupportTicket -Name "Limit Increase" -Title "Capacity Limit increase" -Description "Requesting Limit Increase" -Severity "minimal" -ProblemClassificationId "/providers/Microsoft.Support/services/{billing_service_guid}/problemClassifications/{problemClassification_guid}" -CustomerContactDetail @{FirstName = "Harish" ; LastName = "B" ; PreferredTimeZone = "pacific standard time" ; PreferredSupportLanguage = "en-us" ; Country = "USA" ; PreferredContactMethod = "Email" ; PrimaryEmailAddress = "user@contoso.com"}
+#$requestlimitincrease.SupportTicketId
+
+#}
+
+#else
+# {
+# write-output " Limits are within the threshold limits!!!"
+# Write-Output "Current usage is $($result.properties.currentvalue) out of $($result.properties.limit)"
+# }
