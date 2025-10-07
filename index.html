@@ -2,14 +2,7 @@
 <html lang="en">
 <head>
   <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Cookie&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Allura&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Yellowtail&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="background.webp">
+  <link rel="preload" as="image" href="background.jpg">
   <meta charset="UTF-8">
   <title>Automation Scripting Portfolio</title>
   <style>
@@ -113,13 +106,19 @@
     <div class="script-card">
       <strong><u>Create Shortcuts To Start Stop Azure VM from Windows Desktop</u></strong>
       <div class="description">This script was developed to solve a problem with always running Azure VMs, which were only used intermittently by Finance stuff. These VMs were accruing unnecessary costs 24/7. My solution was to create an Azure Automation Runbook, which would Start/Stop Azure VM on demand. This script was used to create a shortcut on windows devices, which, when clicked, would trigger automation runbook via a webhook with an authorization token.</div>
-      <a href="https://gist.github.com/StasDevOps2bcloud/5b212b7160d585b33fbba642a81a0991#file-create-shortcuts-to-start-stop-azure-vm-ps1" target="_blank" rel="noopener noreferrer">View this script in GitHub Gist</a>
+      <a href="https://gist.github.com/StasDevOps2bcloud/5b212b7160d585b33fbba642a81a0991#file-create-shortcuts-to-start-stop-azure-vm-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div>
 
     <div class="script-card">
       <strong><u>Monitor Azure Resource Quota for high usage and report and notify via email</u></strong>
       <div class="description">This script was developed at a time where there was no quota monitoring capabilities in Azure. Today there are some quota monitoring capabilities present in Azure, but this script still might come in handy for specific usage. This script will check quota usage levels on each Azure subscription and if resource usage is getting close to quota limit - it will send an email report and notification.</div>
-      <a href="https://gist.github.com/StasDevOps2bcloud/30b2844511b616812bbe0977fa6721e2#file-monitor-for-high-service-quota-usage-in-azure-and-report-and-notify-via-email-ps1" target="_blank" rel="noopener noreferrer">View this script in GitHub Gist</a>
+      <a href="https://gist.github.com/StasDevOps2bcloud/30b2844511b616812bbe0977fa6721e2#file-monitor-for-high-service-quota-usage-in-azure-and-report-and-notify-via-email-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
+    </div>
+
+    <div class="script-card">
+      <strong><u>Set Azure Reservation Permissions through Entra ID groups</u></strong>
+      <div class="description">This script was developed to help the Customer Services Team easily set permissions to access newly purchased Azure Reservations by customers. In past, new Azure Reservations did not inherit global permissions on reservation orders and it was needed to manually set permissions for each new reservation. I resolved the problem by using Entra ID groups, which are automatically assigned to each reservation via the script, with relevant access role. The customer manages the Entra ID group assignments.</div>
+      <a href="https://gist.github.com/StasDevOps2bcloud/30b2844511b616812bbe0977fa6721e2#file-monitor-for-high-service-quota-usage-in-azure-and-report-and-notify-via-email-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div>    
 
   </div>
