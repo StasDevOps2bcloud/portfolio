@@ -163,7 +163,7 @@
     
     <div class="script-card">
       <strong><u>Create Shortcuts To Start Stop Azure VM from Windows Desktop</u></strong>
-      <div class="description">This script was developed to solve a problem with always running Azure VMs, which were only used intermittently by Finance stuff. These VMs were accruing unnecessary costs 24/7. My solution was to create an Azure Automation Runbook, which would Start/Stop Azure VM on demand. This script was used to create a shortcut on windows devices, which, when clicked, would trigger automation runbook via a webhook with an authorization token.</div>
+      <div class="description">This script was developed for 2bcloud, to solve a problem with always running Azure VMs, which were only used intermittently by Finance stuff. These VMs were accruing unnecessary costs 24/7. My solution was to create an Azure Automation Runbook, which would Start/Stop Azure VM on demand. This script was used to create a shortcut on windows devices, which, when clicked, would trigger automation runbook via a webhook with an authorization token.</div>
       <a href="https://gist.github.com/StasDevOps2bcloud/5b212b7160d585b33fbba642a81a0991#file-create-shortcuts-to-start-stop-azure-vm-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div>
 
@@ -175,13 +175,13 @@
 
     <div class="script-card">
       <strong><u>Set Azure Reservation Permissions through Entra ID groups</u></strong>
-      <div class="description">This script was developed to help Customer Services Team easily set permissions on newly purchased Azure Reservations for customers. In past, new Azure Reservations did not inherit global permissions on reservation orders and it was needed to manually set permissions for each new reservation. I resolved the problem by using Entra ID groups, which are automatically assigned to each reservation via the script, with relevant access role. The customer manages the Entra ID group assignments.</div>
+      <div class="description">This script was developed for 2bcloud, to help Customer Services Team easily set permissions on newly purchased Azure Reservations for customers. In past, new Azure Reservations did not inherit global permissions on reservation orders and it was needed to manually set permissions for each new reservation. I resolved the problem by using Entra ID groups, which are automatically assigned to each reservation via the script, with relevant access role. The customer manages the Entra ID group assignments.</div>
       <a href="https://gist.github.com/StasDevOps2bcloud/30b2844511b616812bbe0977fa6721e2#file-monitor-for-high-service-quota-usage-in-azure-and-report-and-notify-via-email-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div>    
 
     <div class="script-card">
       <strong><u>Query Microsoft Partner Center API to retrieve a list of customers with details</u></strong>
-      <div class="description">This script was developed as part of the testing of Microsoft Partner Center API functionality. It is a semi automated script, meaning that it is first required to obtain an initial access token manually and then provide it to the script, which will then automatically obtain a refresh and access token to the required Partner Center API and retrieve a list of customers.</div>
+      <div class="description">This script was developed for 2bcloud, as part of testing of Microsoft Partner Center API functionality. It is a semi automated script, meaning that it is first required to obtain an initial access token manually and then provide it to the script, which will then automatically obtain a refresh and access token to the required Partner Center API and retrieve a list of customers.</div>
       <a href="https://gist.github.com/StasDevOps2bcloud/7ea220ccb5128f70da303af20538d24d#file-retrieve-partner-center-customer-list-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div> 
 
@@ -189,7 +189,13 @@
       <strong><u>Export SSL Certificates State for all Azure Web Apps (App Services)</u></strong>
       <div class="description">This script was developed for a customer, which had hundreds of SSL certificates, for custom domain names, on multiple Azure App Services. It was very difficult for the customer to keep track of expiration dates of all the certificates and they were often expiring, causing service downtime. My solution was to create a script, which allows to export all certificate data, including expiration dates to a CSV file, as a report to be aware of which ones expire when and take preventive action. </div>
       <a href="https://gist.github.com/StasDevOps2bcloud/b93fe4002e3d21be05e5fe4830a7e55d#file-export-azure-webapps-certificates-details-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
-    </div> 
+    </div>
+
+    <div class="script-card">
+      <strong><u>Replace Avatar Images for Azure Entra ID User Accounts</u></strong>
+      <div class="description">This script was developed for 2bcloud, to make it easier for HR team to update employee avatar images in Office 365 and make them consistent with the company design. The solution consists of Intune policy that maps an Azure File Share drive to HR employees, which use it to upload avatar image to the drive. Then, an automation script runs and uses the uploaded images to apply them to each employee user, as an avatar.</div>
+      <a href="https://gist.github.com/StasDevOps2bcloud/5d2ccf34b045226b8bac00e7cd9a56bf#file-update-entraid-user-avatarts-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
+    </div>
 
     
     
