@@ -113,13 +113,10 @@
     }
 
     .bold {
-      font-family: 'sans-serif';
-      font-size: 0.90rem;
-      color: black;
-      font-style: bold;
-      margin-top: 0.5rem;
-      margin-bottom: 0;
-      text-align: center;
+      margin: 0.5em 0;
+      font-size: 0.95em;
+      color: #555;
+      text-style: bold;
     }
 
     .script-card {
@@ -168,14 +165,14 @@
     <div class="greetings-glass">
       <h1>Greetings,</h1>
       <h2>Below you can find my Automation Scripting Portfolio</h2>
-      <p class="bold"> Category:</p>
-      <p class="bold"> Problem:</p>
-      <p class="bold"> Solution:</p>
       <p class="subtext">This page is being maintained by Stanislav Dubrovskiy (stasd@outlook.co.il). All scripts were developed while working in 2bcloud (2021-2025)</p>
     </div>
     
     <div class="script-card">
       <strong><u>Create Shortcuts To Start Stop Azure VM from Windows Desktop</u></strong>
+      <p class="bold"> Category:</p>
+      <p class="bold"> Problem:</p>
+      <p class="bold"> Solution:</p>
       <div class="description">This script was developed for 2bcloud, to solve a problem with always running Azure VMs, which were only used intermittently by Finance stuff. These VMs were accruing unnecessary costs 24/7. My solution was to create an Azure Automation Runbook, which would Start/Stop Azure VM on demand. This script was used to create a shortcut on windows devices, which, when clicked, would trigger automation runbook via a webhook with an authorization token.</div>
       <a href="https://gist.github.com/StasDevOps2bcloud/5b212b7160d585b33fbba642a81a0991#file-create-shortcuts-to-start-stop-azure-vm-ps1" target="_blank" rel="noopener noreferrer">View this script as GitHub Gist</a>
     </div>
